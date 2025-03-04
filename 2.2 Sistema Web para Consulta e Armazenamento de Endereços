@@ -1,0 +1,136 @@
+npm create vite@latest frontend --template react
+cd frontend
+npm install
+npm install axios react-router-dom
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  theme: { extend: {} },
+  plugins: [],
+};
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+import axios from "axios";
+const api = axios.create({
+  baseURL: "http://localhost:5000", // URL do backend
+});
+export const fetchAddress = async (cep) => {
+  try {
+    const response = await api.post("/enderecos", { cep });
+    return response.data;
+  } catch (error) {
+    throw new Error("Erro ao buscar o endereço.");
+  }
+};
+export const getStoredAddresses = async (sortBy) => {
+  try {
+    const response = await api.get(`/enderecos?sortBy=${sortBy}`);
+    return response.data;
+  } catch (error) {
+    throw new Error("Erro ao obter endereços armazenados.");
+  }
+};
+
+import { useState } from "react";
+import { fetchAddress } from "../services/api";
+export default function SearchBar({ onNewAddress }) {
+  const [cep, setCep] = useState("");
+  const [error, setError] = useState("");
+  const handleSearch = async () => {
+    if (cep.length !== 8) {
+      setError("CEP inválido! Digite um CEP com 8 dígitos.");
+      return;
+    }
+    try {
+      const address = await fetchAddress(cep);
+      onNewAddress(address);
+      setError("");
+      setCep("");
+    } catch (err) {
+      setError("Erro ao buscar o endereço.");
+    }
+  };
+  return (
+    <div className="p-4 flex flex-col items-center gap-2">
+      <input
+        type="text"
+        placeholder="Digite o CEP"
+        value={cep}
+        onChange={(e) => setCep(e.target.value)}
+        className="border p-2 rounded-md"
+      />
+      <button onClick={handleSearch} className="bg-blue-500 text-white px-4 py-2 rounded-md">
+        Buscar
+      </button>
+      {error && <p className="text-red-500">{error}</p>}
+    </div>
+  );
+}
+
+import { useEffect, useState } from "react";
+import { getStoredAddresses } from "../services/api";
+export default function AddressList() {
+  const [addresses, setAddresses] = useState([]);
+  const [sortBy, setSortBy] = useState("cidade");
+  useEffect(() => {
+    async function fetchAddresses() {
+      const data = await getStoredAddresses(sortBy);
+      setAddresses(data);
+    }
+    fetchAddresses();
+  }, [sortBy]);
+  return (
+    <div className="p-4">
+      <h2 className="text-lg font-semibold">Endereços Armazenados</h2>
+      <div className="flex gap-2 mt-2">
+        <label>Ordenar por:</label>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="border p-1">
+          <option value="cidade">Cidade</option>
+          <option value="bairro">Bairro</option>
+          <option value="estado">Estado</option>
+        </select>
+      </div>
+      <ul className="mt-4">
+        {addresses.map((addr) => (
+          <li key={addr.cep} className="border p-2 rounded-md mb-2">
+            {addr.logradouro}, {addr.bairro} - {addr.cidade}/{addr.estado}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+import { useState } from "react";
+import SearchBar from "../components/SearchBar";
+import AddressList from "../components/AddressList";
+export default function Home() {
+  const [addresses, setAddresses] = useState([]);
+  const handleNewAddress = (newAddress) => {
+    setAddresses((prev) => [...prev, newAddress]);
+  };
+  return (
+    <div className="max-w-lg mx-auto mt-10">
+      <h1 className="text-2xl font-bold text-center">Consulta de Endereços</h1>
+      <SearchBar onNewAddress={handleNewAddress} />
+      <AddressList addresses={addresses} />
+    </div>
+  );
+}
+
+import Home from "./pages/Home";
+export default function App() {
+  return (
+    <div className="min-h-screen bg-gray-100 flex justify-center items-center">
+      <Home />
+    </div>
+  );
+}
+
+npm run dev

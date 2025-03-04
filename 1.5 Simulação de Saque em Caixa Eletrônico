@@ -1,0 +1,15 @@
+def saque_caixa(valor):
+    notas = [100, 50, 20, 10, 5, 2, 1]
+    resultado = {}
+    for nota in notas:
+        qtd, valor = divmod(valor, nota)
+        if qtd:
+            resultado[nota] = qtd
+    return resultado
+
+# Exemplo de entrada e saída:
+
+valor_saque = 130
+resultado_saque = saque_caixa(valor_saque)
+for nota, qtd in resultado_saque.items():
+    print(f"{qtd} nota(s) de {nota}")

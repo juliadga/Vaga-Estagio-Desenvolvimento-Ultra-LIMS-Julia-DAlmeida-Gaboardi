@@ -1,0 +1,13 @@
+def maior_palindromo(s):
+    def expande(s, esquerda, direita):
+        while esquerda >= 0 and direita < len(s) and s[esquerda] == s[direita]:
+            esquerda -= 1
+            direita += 1
+        return s[esquerda+1:direita]
+    maior = ""
+    for i in range(len(s)):
+        pal1 = expande(s, i, i)
+        pal2 = expande(s, i, i+1)
+        maior = max(maior, pal1, pal2, key=len)
+    return maior
+print(maior_palindromo("babad"))

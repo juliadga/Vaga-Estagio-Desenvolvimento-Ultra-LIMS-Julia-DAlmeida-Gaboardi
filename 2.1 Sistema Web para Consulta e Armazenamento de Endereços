@@ -1,0 +1,66 @@
+// backend/src/server.js
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+import axios from 'axios';
+dotenv.config();
+const app = express();
+app.use(express.json());
+app.use(cors());
+
+// Conexão com o MongoDB
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+}).then(() => console.log('MongoDB conectado')).catch(err => console.error(err));
+
+// Definição do modelo de endereço
+const addressSchema = new mongoose.Schema({
+    cep: String,
+    logradouro: String,
+    bairro: String,
+    localidade: String,
+    uf: String,
+});
+const Address = mongoose.model('Address', addressSchema);
+
+// Rota para buscar endereço pelo CEP e salvar no banco
+app.post('/enderecos', async (req, res) => {
+    const { cep } = req.body;
+    try {
+        const response = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
+        if (response.data.erro) {
+            return res.status(400).json({ message: 'CEP inválido' });
+        }
+        const { logradouro, bairro, localidade, uf } = response.data;
+        const newAddress = new Address({ cep, logradouro, bairro, localidade, uf });
+        await newAddress.save();
+        res.json(newAddress);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar CEP' });
+    }
+});
+
+// Rota para listar endereços armazenados com ordenação
+app.get('/enderecos', async (req, res) => {
+    const { orderBy, order } = req.query;
+    const validFields = ['localidade', 'bairro', 'uf'];
+    if (orderBy && !validFields.includes(orderBy)) {
+        return res.status(400).json({ message: 'Campo de ordenação inválido' });
+    }
+    const sortOptions = orderBy ? { [orderBy]: order === 'desc' ? -1 : 1 } : {};
+    const addresses = await Address.find().sort(sortOptions);
+    res.json(addresses);
+});
+
+// Inicializa o servidor
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+});
+
+MONGO_URI=your_mongodb_connection_string
+PORT=5000
+npm install express cors dotenv mongoose axios
+node src/server.js
